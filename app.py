@@ -13,13 +13,21 @@ def db():
 
 def init_db():
     conn = db()
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS notizen (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             text TEXT NOT NULL,
-            zeit TEXT NOT NULL
+            zeit TEXT NOT NULL DEFAULT ''
         )
     """)
+
+    # 🔧 MIGRATION: falls alte DB existiert
+    try:
+        conn.execute("ALTER TABLE notizen ADD COLUMN zeit TEXT DEFAULT ''")
+    except:
+        pass
+
     conn.commit()
     conn.close()
 
