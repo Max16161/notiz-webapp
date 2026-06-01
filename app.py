@@ -4,21 +4,39 @@ from datetime import datetime
 
 app = Flask(__name__)
 
+DB = "notizen.db"
+
 
 def db():
-    return sqlite3.connect("notizen.db")
+    return sqlite3.connect(DB)
+
+
+def init_db():
+    conn = db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS notizen (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            text TEXT NOT NULL,
+            zeit TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+init_db()
 
 
 @app.route("/")
 def home():
-    q = request.args.get("q")
+    q = request.args.get("q", "")
 
     conn = db()
 
     if q:
         notizen = conn.execute(
             "SELECT id, text, zeit FROM notizen WHERE text LIKE ? ORDER BY id DESC",
-            ("%" + q + "%",)
+            (f"%{q}%",)
         ).fetchall()
     else:
         notizen = conn.execute(
@@ -27,18 +45,17 @@ def home():
 
     conn.close()
 
-    return render_template("index.html", notizen=notizen, q=q or "")
+    return render_template("index.html", notizen=notizen, q=q)
 
 
 @app.route("/speichern", methods=["POST"])
 def speichern():
     text = request.form["notiz"]
-    zeit = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     conn = db()
     conn.execute(
-        "INSERT INTO notizen(text, zeit) VALUES(?, ?)",
-        (text, zeit)
+        "INSERT INTO notizen (text, zeit) VALUES (?, ?)",
+        (text, datetime.now().strftime("%Y-%m-%d %H:%M"))
     )
     conn.commit()
     conn.close()
@@ -54,7 +71,3 @@ def loeschen(id):
     conn.close()
 
     return redirect("/")
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
