@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>🧠 Notiz App</title>
+
+    <style>
+        body {
+            background: #121212;
+            color: white;
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* 🔍 Suche */
+        .search {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+        }
+
+        .search button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            background: #2196F3;
+            color: white;
+            cursor: pointer;
+        }
+
+        /* ➕ Eingabe */
+        .form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+        }
+
+        .form button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        /* 📝 Notizen */
+        .notiz {
+            background: #1e1e1e;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .zeit {
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        .loeschen {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            color: red;
+            text-decoration: none;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>🧠 Meine Notiz App</h1>
+
+<!-- 🔍 SUCHE -->
+<form class="search" method="get" action="/">
+    <input name="q" placeholder="🔍 Suche..." value="{{ q }}">
+    <button>Suchen</button>
+</form>
+
+<!-- ➕ NEUE NOTIZ -->
+<form class="form" action="/speichern" method="post">
+    <input name="notiz" placeholder="Neue Notiz schreiben...">
+    <button>Speichern</button>
+</form>
+
+<hr>
+
+<!-- 📝 NOTIZEN -->
+{% for id, text, zeit in notizen %}
+<div class="notiz">
+
+    <div class="zeit">{{ zeit }}</div>
+
+    <div class="text">{{ text }}</div>
+
+    <a class="loeschen" href="/loeschen/{{ id }}">🗑️</a>
+
+</div>
+{% endfor %}
+
+</body>
+</html>
