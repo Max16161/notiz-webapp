@@ -1,132 +1,163 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Antifaschistischer Chat</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Antifaschistischer Chat</title>
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #121212;
-            color: white;
-        }
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0a0a0a;
+    color: white;
+}
 
-        .container {
-            max-width: 800px;
-            margin: auto;
-            padding: 16px;
-        }
+/* HEADER */
+.header {
+    text-align: center;
+    padding: 18px;
+    background: linear-gradient(90deg, #8b0000, #000);
+    border-bottom: 2px solid #ff0000;
+}
 
-        h1 {
-            text-align: center;
-            font-size: 22px;
-            margin-bottom: 20px;
-        }
+.logo {
+    font-size: 28px;
+}
 
-        /* Inputs full mobile width */
-        form {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
+.title {
+    font-size: 18px;
+    letter-spacing: 1px;
+}
 
-        input {
-            flex: 1;
-            padding: 12px;
-            border-radius: 10px;
-            border: none;
-            outline: none;
-        }
+/* CHAT */
+.container {
+    max-width: 700px;
+    margin: auto;
+    padding: 12px;
+}
 
-        button {
-            padding: 12px 14px;
-            border-radius: 10px;
-            border: none;
-            background: #2196F3;
-            color: white;
-            cursor: pointer;
-            white-space: nowrap;
-        }
+.chat {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    margin-bottom: 15px;
+}
 
-        .add button {
-            background: #4CAF50;
-        }
+.msg {
+    background: #151515;
+    border-left: 4px solid #ff0000;
+    padding: 10px;
+    border-radius: 10px;
+}
 
-        /* Notes */
-        .note {
-            background: #1e1e1e;
-            padding: 12px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            position: relative;
-        }
+.name {
+    color: #ff4d4d;
+    font-weight: bold;
+    font-size: 13px;
+}
 
-        .time {
-            font-size: 11px;
-            opacity: 0.6;
-            margin-bottom: 6px;
-        }
+.time {
+    font-size: 10px;
+    opacity: 0.6;
+}
 
-        .delete {
-            position: absolute;
-            right: 10px;
-            top: 10px;
-            color: red;
-            text-decoration: none;
-            font-size: 18px;
-        }
+/* FORM */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
 
-        /* 📱 MOBILE OPTIMIZATION */
-        @media (max-width: 600px) {
+input {
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    background: #111;
+    color: white;
+}
 
-            h1 {
-                font-size: 18px;
-            }
+input:focus {
+    border: 1px solid #ff0000;
+}
 
-            form {
-                flex-direction: column;
-            }
+button {
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #ff0000, #8b0000);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
 
-            button {
-                width: 100%;
-            }
-        }
-    </style>
+button:hover {
+    opacity: 0.9;
+}
+</style>
 </head>
 
 <body>
 
+<div class="header">
+    <div class="logo">✊</div>
+    <div class="title">ANTIFASCHISTISCHER CHAT</div>
+</div>
+
 <div class="container">
 
-    <h1>Antifaschistischer Chat</h1>
+<div class="chat" id="chat"></div>
 
-    <!-- 🔍 Suche -->
-    <form method="get" action="/">
-        <input name="q" placeholder="🔍 Suche..." value="{{ q }}">
-        <button>Suche</button>
-    </form>
-
-    <!-- ➕ Add -->
-    <form class="add" action="/speichern" method="post">
-        <input name="notiz" placeholder="Neue Notiz...">
-        <button>+</button>
-    </form>
-
-    <!-- 📝 Notes -->
-    {% for id, text, zeit in notizen %}
-    <div class="note">
-
-        <a class="delete" href="/loeschen/{{ id }}">🗑️</a>
-
-        <div class="time">{{ zeit }}</div>
-        <div class="text">{{ text }}</div>
-
-    </div>
-    {% endfor %}
+<form id="form">
+    <input name="name" placeholder="Dein Name" required>
+    <input name="text" placeholder="Nachricht schreiben..." required>
+    <button>Senden</button>
+</form>
 
 </div>
+
+<script>
+const chat = document.getElementById("chat");
+const form = document.getElementById("form");
+
+async function loadMessages() {
+    const res = await fetch("/messages");
+    const data = await res.json();
+
+    chat.innerHTML = "";
+
+    data.messages.forEach(m => {
+        const div = document.createElement("div");
+        div.className = "msg";
+
+        div.innerHTML = `
+            <div class="name">${m.name}</div>
+            <div>${m.text}</div>
+            <div class="time">${m.zeit}</div>
+        `;
+
+        chat.appendChild(div);
+    });
+}
+
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+
+    await fetch("/send", {
+        method: "POST",
+        body: formData
+    });
+
+    form.reset();
+    loadMessages();
+});
+
+setInterval(loadMessages, 2000);
+
+loadMessages();
+</script>
 
 </body>
 </html>
