@@ -1,162 +1,58 @@
 <!DOCTYPE html>
-<html lang="de">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Antifaschistischer Chat</title>
-
+<title>Chat</title>
 <style>
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #0a0a0a;
-    color: white;
-}
+body { background:#0a0a0a; color:white; font-family:Arial; }
 
-/* HEADER */
-.header {
-    text-align: center;
-    padding: 18px;
-    background: linear-gradient(90deg, #8b0000, #000);
-    border-bottom: 2px solid #ff0000;
-}
+.chat { height:70vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
 
-.logo {
-    font-size: 28px;
-}
+.msg { background:#151515; padding:10px; border-left:4px solid red; }
 
-.title {
-    font-size: 18px;
-    letter-spacing: 1px;
-}
-
-/* CHAT */
-.container {
-    max-width: 700px;
-    margin: auto;
-    padding: 12px;
-}
-
-.chat {
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.msg {
-    background: #151515;
-    border-left: 4px solid #ff0000;
-    padding: 10px;
-    border-radius: 10px;
-}
-
-.name {
-    color: #ff4d4d;
-    font-weight: bold;
-    font-size: 13px;
-}
-
-.time {
-    font-size: 10px;
-    opacity: 0.6;
-}
-
-/* FORM */
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-input {
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid #333;
-    background: #111;
-    color: white;
-}
-
-input:focus {
-    border: 1px solid #ff0000;
-}
-
-button {
-    padding: 12px;
-    border: none;
-    border-radius: 10px;
-    background: linear-gradient(90deg, #ff0000, #8b0000);
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-button:hover {
-    opacity: 0.9;
-}
+.name { color:red; font-weight:bold; }
 </style>
 </head>
-
 <body>
 
-<div class="header">
-    <div class="logo">✊</div>
-    <div class="title">ANTIFASCHISTISCHER CHAT</div>
-</div>
-
-<div class="container">
+<h2>Chat – eingeloggt als {{ user }}</h2>
+<a href="/logout">Logout</a>
 
 <div class="chat" id="chat"></div>
 
 <form id="form">
-    <input name="name" placeholder="Dein Name" required>
-    <input name="text" placeholder="Nachricht schreiben..." required>
+    <input id="text" placeholder="Nachricht">
     <button>Senden</button>
 </form>
 
-</div>
-
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
+const socket = io();
 const chat = document.getElementById("chat");
-const form = document.getElementById("form");
+const user = "{{ user }}";
 
-async function loadMessages() {
-    const res = await fetch("/messages");
-    const data = await res.json();
-
-    chat.innerHTML = "";
-
-    data.messages.forEach(m => {
-        const div = document.createElement("div");
-        div.className = "msg";
-
-        div.innerHTML = `
-            <div class="name">${m.name}</div>
-            <div>${m.text}</div>
-            <div class="time">${m.zeit}</div>
-        `;
-
-        chat.appendChild(div);
-    });
-}
-
-form.addEventListener("submit", async (e) => {
+document.getElementById("form").addEventListener("submit", (e) => {
     e.preventDefault();
 
-    const formData = new FormData(form);
-
-    await fetch("/send", {
-        method: "POST",
-        body: formData
+    socket.emit("send_message", {
+        name: user,
+        text: document.getElementById("text").value
     });
 
-    form.reset();
-    loadMessages();
+    document.getElementById("text").value = "";
 });
 
-setInterval(loadMessages, 2000);
+socket.on("new_message", (msg) => {
+    const div = document.createElement("div");
+    div.className = "msg";
 
-loadMessages();
+    div.innerHTML = `
+        <div class="name">${msg.name}</div>
+        <div>${msg.text}</div>
+        <div>${msg.zeit}</div>
+    `;
+
+    chat.appendChild(div);
+});
 </script>
 
 </body>
