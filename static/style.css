@@ -573,3 +573,32 @@ button:hover {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+.channel-create {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.channel-create input[type="text"],
+.channel-create input:not([type]) {
+    width: 100%;
+}
+
+.channel-create label {
+    font-size: 12px;
+    color: #ccc;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.channel-create label input {
+    width: auto;
+}
+
+.channel-create button {
+    padding: 8px;
+    border-radius: 10px;
+}

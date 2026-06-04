@@ -6,9 +6,78 @@ const onlinePanel = document.getElementById("onlinePanel");
 const onlineUsers = document.getElementById("onlineUsers");
 const adminPanel = document.getElementById("adminPanel");
 const adminUsers = document.getElementById("adminUsers");
+const adminChannels = document.getElementById("adminChannels");
 const roomTitle = document.getElementById("roomTitle");
+const channelList = document.getElementById("channelList");
+const newChannelName = document.getElementById("newChannelName");
+const newChannelAdminOnly = document.getElementById("newChannelAdminOnly");
 
 let currentChannel = window.START_CHANNEL || "allgemein";
+
+async function loadChannels() {
+    const res = await fetch("/channels");
+
+    if (!res.ok) return;
+
+    const channels = await res.json();
+
+    channelList.innerHTML = "";
+
+    if (!channels.some(c => c.name === currentChannel)) {
+        currentChannel = channels.length ? channels[0].name : "allgemein";
+    }
+
+    channels.forEach(channel => {
+        const btn = document.createElement("button");
+        btn.className = "channel-btn";
+        btn.dataset.channel = channel.name;
+        btn.textContent = "# " + channel.name + (channel.admin_only ? " 🔒" : "");
+        btn.onclick = () => switchChannel(channel.name);
+        btn.classList.toggle("active", channel.name === currentChannel);
+        channelList.appendChild(btn);
+    });
+
+    roomTitle.textContent = "# " + currentChannel;
+    loadMessages();
+}
+
+async function loadAdminChannels() {
+    if (!window.IS_ADMIN || !adminChannels) return;
+
+    const res = await fetch("/admin/channels");
+
+    if (!res.ok) return;
+
+    const channels = await res.json();
+
+    adminChannels.innerHTML = "";
+
+    channels.forEach(channel => {
+        const div = document.createElement("div");
+        div.className = "admin-user";
+
+        div.innerHTML = `
+            <div>
+                <b># ${escapeHtml(channel.name)}</b>
+                <span>${channel.admin_only ? "ADMIN-RAUM" : "ÖFFENTLICH"}${channel.protected ? " · GESCHÜTZT" : ""}</span>
+            </div>
+            ${!channel.protected ? `<button onclick="deleteChannel('${escapeHtml(channel.name)}')">löschen</button>` : ""}
+        `;
+
+        adminChannels.appendChild(div);
+    });
+}
+
+function switchChannel(channel) {
+    currentChannel = channel;
+    roomTitle.textContent = "# " + channel;
+
+    document.querySelectorAll(".channel-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.channel === channel);
+    });
+
+    loadMessages();
+}
 
 async function loadMessages() {
     const res = await fetch(`/messages?channel=${encodeURIComponent(currentChannel)}`);
@@ -22,17 +91,6 @@ async function loadMessages() {
     data.forEach(addMessage);
 
     chat.scrollTop = chat.scrollHeight;
-}
-
-function switchChannel(channel) {
-    currentChannel = channel;
-    roomTitle.textContent = "# " + channel;
-
-    document.querySelectorAll(".channel-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.channel === channel);
-    });
-
-    loadMessages();
 }
 
 function addMessage(m) {
@@ -96,6 +154,11 @@ socket.on("chat_cleared", (data) => {
     }
 });
 
+socket.on("channels_changed", () => {
+    loadChannels();
+    loadAdminChannels();
+});
+
 socket.on("online_users", (users) => {
     onlineUsers.innerHTML = "";
 
@@ -128,6 +191,56 @@ function toggleAdmin() {
     if (!adminPanel) return;
     adminPanel.classList.toggle("hidden");
     loadAdminUsers();
+    loadAdminChannels();
+}
+
+async function createChannel() {
+    if (!newChannelName) return;
+
+    const name = newChannelName.value.trim();
+    const adminOnly = newChannelAdminOnly.checked;
+
+    if (!name) return;
+
+    const res = await fetch("/admin/create-channel", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: name,
+            admin_only: adminOnly
+        })
+    });
+
+    if (!res.ok) {
+        alert("Raum konnte nicht erstellt werden");
+        return;
+    }
+
+    newChannelName.value = "";
+    newChannelAdminOnly.checked = false;
+
+    loadChannels();
+    loadAdminChannels();
+}
+
+async function deleteChannel(name) {
+    const sure = confirm(`#${name} wirklich löschen? Alle Nachrichten darin werden gelöscht.`);
+
+    if (!sure) return;
+
+    const res = await fetch("/admin/delete-channel", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ name })
+    });
+
+    if (!res.ok) {
+        alert("Raum konnte nicht gelöscht werden");
+        return;
+    }
+
+    loadChannels();
+    loadAdminChannels();
 }
 
 async function loadAdminUsers() {
@@ -219,10 +332,11 @@ function timeAgo(value) {
     return `vor ${hours}h`;
 }
 
-loadMessages();
+loadChannels();
 
 if (window.IS_ADMIN) {
     loadAdminUsers();
+    loadAdminChannels();
 }
 
 setInterval(() => {

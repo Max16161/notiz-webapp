@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, redirect, session
 from flask_socketio import SocketIO, emit
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
+import re
 
 app = Flask(__name__)
 app.secret_key = "change-this-secret-key"
@@ -11,9 +12,6 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 DB = "chat.db"
 ADMIN_NAME = "max"
 ADMIN_PASSWORD = "admin123"
-
-CHANNELS = ["allgemein", "offtopic", "support", "admin"]
-PUBLIC_CHANNELS = ["allgemein", "offtopic", "support"]
 
 online_users = set()
 
@@ -27,6 +25,13 @@ def db():
 def column_exists(conn, table, column):
     rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
     return any(row["name"] == column for row in rows)
+
+
+def clean_channel_name(name):
+    name = name.strip().lower()
+    name = name.replace(" ", "-")
+    name = re.sub(r"[^a-z0-9äöüß_-]", "", name)
+    return name[:30]
 
 
 def init_db():
@@ -64,6 +69,35 @@ def init_db():
             last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS channels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            admin_only INTEGER DEFAULT 0,
+            protected INTEGER DEFAULT 0,
+            created DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    default_channels = [
+        ("allgemein", 0, 1),
+        ("offtopic", 0, 0),
+        ("support", 0, 0),
+        ("admin", 1, 1)
+    ]
+
+    for name, admin_only, protected in default_channels:
+        exists = conn.execute(
+            "SELECT id FROM channels WHERE name = ?",
+            (name,)
+        ).fetchone()
+
+        if not exists:
+            conn.execute(
+                "INSERT INTO channels (name, admin_only, protected) VALUES (?, ?, ?)",
+                (name, admin_only, protected)
+            )
 
     admin = conn.execute(
         "SELECT * FROM users WHERE username = ?",
@@ -104,12 +138,45 @@ def is_admin():
     return bool(user and user["role"] == "admin")
 
 
+def get_visible_channels():
+    user = current_user()
+
+    if not user:
+        return []
+
+    conn = db()
+
+    if user["role"] == "admin":
+        rows = conn.execute(
+            "SELECT name, admin_only, protected FROM channels ORDER BY id ASC"
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT name, admin_only, protected FROM channels WHERE admin_only = 0 ORDER BY id ASC"
+        ).fetchall()
+
+    conn.close()
+    return [dict(row) for row in rows]
+
+
 def can_access_channel(channel):
-    if channel not in CHANNELS:
+    user = current_user()
+
+    if not user:
         return False
 
-    if channel == "admin":
-        return is_admin()
+    conn = db()
+    row = conn.execute(
+        "SELECT * FROM channels WHERE name = ?",
+        (channel,)
+    ).fetchone()
+    conn.close()
+
+    if not row:
+        return False
+
+    if row["admin_only"] and user["role"] != "admin":
+        return False
 
     return True
 
@@ -121,13 +188,11 @@ def index():
     if not user:
         return redirect("/login")
 
-    visible_channels = CHANNELS if user["role"] == "admin" else PUBLIC_CHANNELS
-
     return render_template(
         "index.html",
         user=user["username"],
         is_admin=user["role"] == "admin",
-        channels=visible_channels
+        channels=get_visible_channels()
     )
 
 
@@ -189,6 +254,14 @@ def logout():
     return redirect("/login")
 
 
+@app.route("/channels")
+def channels():
+    if not current_user():
+        return jsonify([]), 403
+
+    return jsonify(get_visible_channels())
+
+
 @app.route("/messages")
 def messages():
     if not current_user():
@@ -228,6 +301,89 @@ def admin_users():
     return jsonify([dict(row) for row in rows])
 
 
+@app.route("/admin/channels")
+def admin_channels():
+    if not is_admin():
+        return jsonify({"error": "admin required"}), 403
+
+    conn = db()
+    rows = conn.execute("""
+        SELECT name, admin_only, protected
+        FROM channels
+        ORDER BY id ASC
+    """).fetchall()
+    conn.close()
+
+    return jsonify([dict(row) for row in rows])
+
+
+@app.route("/admin/create-channel", methods=["POST"])
+def admin_create_channel():
+    if not is_admin():
+        return jsonify({"error": "admin required"}), 403
+
+    data = request.get_json()
+
+    name = clean_channel_name(data.get("name", ""))
+    admin_only = 1 if data.get("admin_only") else 0
+
+    if not name:
+        return jsonify({"error": "invalid channel name"}), 400
+
+    conn = db()
+
+    try:
+        conn.execute(
+            "INSERT INTO channels (name, admin_only, protected) VALUES (?, ?, 0)",
+            (name, admin_only)
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({"error": "channel exists"}), 400
+
+    conn.close()
+
+    socketio.emit("channels_changed")
+
+    return jsonify({"ok": True, "name": name})
+
+
+@app.route("/admin/delete-channel", methods=["POST"])
+def admin_delete_channel():
+    if not is_admin():
+        return jsonify({"error": "admin required"}), 403
+
+    data = request.get_json()
+    name = data.get("name", "")
+
+    conn = db()
+
+    channel = conn.execute(
+        "SELECT * FROM channels WHERE name = ?",
+        (name,)
+    ).fetchone()
+
+    if not channel:
+        conn.close()
+        return jsonify({"error": "channel not found"}), 404
+
+    if channel["protected"]:
+        conn.close()
+        return jsonify({"error": "protected channel"}), 400
+
+    conn.execute("DELETE FROM messages WHERE channel = ?", (name,))
+    conn.execute("DELETE FROM channels WHERE name = ?", (name,))
+
+    conn.commit()
+    conn.close()
+
+    socketio.emit("channels_changed")
+    socketio.emit("chat_cleared", {"channel": name})
+
+    return jsonify({"ok": True})
+
+
 @app.route("/admin/delete-message", methods=["POST"])
 def admin_delete_message():
     if not is_admin():
@@ -254,7 +410,7 @@ def admin_clear_chat():
     data = request.get_json()
     channel = data.get("channel", "allgemein")
 
-    if channel not in CHANNELS:
+    if not can_access_channel(channel):
         return jsonify({"error": "unknown channel"}), 400
 
     conn = db()

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Antifaschistischer Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css?v=channels-1">
+    <link rel="stylesheet" href="/static/style.css?v=dynamic-channels-1">
 </head>
 
 <body>
@@ -61,6 +61,20 @@
 
         <button class="danger-btn" onclick="clearChat()">Aktuellen Raum leeren</button>
 
+        <div class="admin-section-title">Neuer Raum</div>
+
+        <div class="channel-create">
+            <input id="newChannelName" placeholder="raum-name">
+            <label>
+                <input id="newChannelAdminOnly" type="checkbox">
+                nur Admin
+            </label>
+            <button onclick="createChannel()">Erstellen</button>
+        </div>
+
+        <div class="admin-section-title">Räume</div>
+        <div id="adminChannels"></div>
+
         <div class="admin-section-title">User</div>
         <div id="adminUsers"></div>
     </div>
@@ -72,13 +86,7 @@
     <aside class="manifest-panel">
         <div class="manifest-title">RÄUME</div>
 
-        <div class="channel-list">
-            {% for channel in channels %}
-                <button class="channel-btn {% if loop.first %}active{% endif %}" data-channel="{{ channel }}" onclick="switchChannel('{{ channel }}')">
-                    # {{ channel }}
-                </button>
-            {% endfor %}
-        </div>
+        <div id="channelList" class="channel-list"></div>
 
         <div class="poster-block">
             <div>ANTIFASCHISTISCH</div>
@@ -110,11 +118,11 @@
 <script>
     window.CURRENT_USER = "{{ user }}";
     window.IS_ADMIN = {{ "true" if is_admin else "false" }};
-    window.START_CHANNEL = "{{ channels[0] }}";
+    window.START_CHANNEL = "allgemein";
 </script>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script src="/static/app.js?v=channels-1"></script>
+<script src="/static/app.js?v=dynamic-channels-1"></script>
 
 </body>
 </html>
