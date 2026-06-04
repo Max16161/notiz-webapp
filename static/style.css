@@ -537,3 +537,39 @@ button:hover {
     cursor: pointer;
     font-size: 11px;
 }
+
+.channel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.channel-btn {
+    width: 100%;
+    text-align: left;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 0, 0, 0.35);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.channel-btn:hover {
+    background: rgba(255, 0, 0, 0.14);
+}
+
+.channel-btn.active {
+    background: rgba(255, 0, 0, 0.28);
+    border-color: rgba(255, 0, 0, 0.75);
+    color: #ff4a4a;
+    box-shadow: 0 0 16px rgba(255, 0, 0, 0.18);
+}
+
+@media (max-width: 900px) {
+    .channel-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+}

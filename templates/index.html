@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Antifaschistischer Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css?v=socket-live-1">
+    <link rel="stylesheet" href="/static/style.css?v=channels-1">
 </head>
 
 <body>
@@ -59,7 +59,7 @@
     <div id="adminPanel" class="admin-panel hidden">
         <div class="online-title">Admin Panel</div>
 
-        <button class="danger-btn" onclick="clearChat()">Chat leeren</button>
+        <button class="danger-btn" onclick="clearChat()">Aktuellen Raum leeren</button>
 
         <div class="admin-section-title">User</div>
         <div id="adminUsers"></div>
@@ -70,12 +70,15 @@
 <main class="main-layout">
 
     <aside class="manifest-panel">
-        <div class="manifest-title">SOLIDARITÄT</div>
+        <div class="manifest-title">RÄUME</div>
 
-        <div class="manifest-line">Kein Platz für Faschismus.</div>
-        <div class="manifest-line">Kein Platz für Hass.</div>
-        <div class="manifest-line">Gemeinsam statt allein.</div>
-        <div class="manifest-line">Menschenwürde bleibt unantastbar.</div>
+        <div class="channel-list">
+            {% for channel in channels %}
+                <button class="channel-btn {% if loop.first %}active{% endif %}" data-channel="{{ channel }}" onclick="switchChannel('{{ channel }}')">
+                    # {{ channel }}
+                </button>
+            {% endfor %}
+        </div>
 
         <div class="poster-block">
             <div>ANTIFASCHISTISCH</div>
@@ -87,7 +90,7 @@
     <section class="chat-shell">
         <div class="chat-head">
             <div>
-                <strong>Community Chat</strong>
+                <strong id="roomTitle"># allgemein</strong>
                 <span>Echter Live-Chat über WebSocket</span>
             </div>
 
@@ -107,10 +110,11 @@
 <script>
     window.CURRENT_USER = "{{ user }}";
     window.IS_ADMIN = {{ "true" if is_admin else "false" }};
+    window.START_CHANNEL = "{{ channels[0] }}";
 </script>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script src="/static/app.js?v=socket-live-1"></script>
+<script src="/static/app.js?v=channels-1"></script>
 
 </body>
 </html>

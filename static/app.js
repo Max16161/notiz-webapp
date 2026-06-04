@@ -6,9 +6,12 @@ const onlinePanel = document.getElementById("onlinePanel");
 const onlineUsers = document.getElementById("onlineUsers");
 const adminPanel = document.getElementById("adminPanel");
 const adminUsers = document.getElementById("adminUsers");
+const roomTitle = document.getElementById("roomTitle");
+
+let currentChannel = window.START_CHANNEL || "allgemein";
 
 async function loadMessages() {
-    const res = await fetch("/messages");
+    const res = await fetch(`/messages?channel=${encodeURIComponent(currentChannel)}`);
 
     if (!res.ok) return;
 
@@ -21,7 +24,20 @@ async function loadMessages() {
     chat.scrollTop = chat.scrollHeight;
 }
 
+function switchChannel(channel) {
+    currentChannel = channel;
+    roomTitle.textContent = "# " + channel;
+
+    document.querySelectorAll(".channel-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.channel === channel);
+    });
+
+    loadMessages();
+}
+
 function addMessage(m) {
+    if (m.channel !== currentChannel) return;
+
     const div = document.createElement("div");
 
     const mine = m.user === window.CURRENT_USER;
@@ -47,7 +63,10 @@ function sendMsg() {
 
     if (!text) return;
 
-    socket.emit("send_message", { text });
+    socket.emit("send_message", {
+        text: text,
+        channel: currentChannel
+    });
 
     textInput.value = "";
 }
@@ -71,8 +90,10 @@ socket.on("message_deleted", (data) => {
     if (el) el.remove();
 });
 
-socket.on("chat_cleared", () => {
-    chat.innerHTML = "";
+socket.on("chat_cleared", (data) => {
+    if (data.channel === currentChannel) {
+        chat.innerHTML = "";
+    }
 });
 
 socket.on("online_users", (users) => {
@@ -158,14 +179,14 @@ async function deleteMessage(id) {
 }
 
 async function clearChat() {
-    const sure = confirm("Wirklich alle Nachrichten löschen?");
+    const sure = confirm(`Wirklich alle Nachrichten in #${currentChannel} löschen?`);
 
     if (!sure) return;
 
     await fetch("/admin/clear-chat", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({})
+        body: JSON.stringify({ channel: currentChannel })
     });
 }
 

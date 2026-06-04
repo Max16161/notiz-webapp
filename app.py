@@ -12,6 +12,9 @@ DB = "chat.db"
 ADMIN_NAME = "max"
 ADMIN_PASSWORD = "admin123"
 
+CHANNELS = ["allgemein", "offtopic", "support", "admin"]
+PUBLIC_CHANNELS = ["allgemein", "offtopic", "support"]
+
 online_users = set()
 
 
@@ -51,6 +54,9 @@ def init_db():
             created DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    if not column_exists(conn, "messages", "channel"):
+        conn.execute("ALTER TABLE messages ADD COLUMN channel TEXT DEFAULT 'allgemein'")
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS presence (
@@ -98,6 +104,16 @@ def is_admin():
     return bool(user and user["role"] == "admin")
 
 
+def can_access_channel(channel):
+    if channel not in CHANNELS:
+        return False
+
+    if channel == "admin":
+        return is_admin()
+
+    return True
+
+
 @app.route("/")
 def index():
     user = current_user()
@@ -105,10 +121,13 @@ def index():
     if not user:
         return redirect("/login")
 
+    visible_channels = CHANNELS if user["role"] == "admin" else PUBLIC_CHANNELS
+
     return render_template(
         "index.html",
         user=user["username"],
-        is_admin=user["role"] == "admin"
+        is_admin=user["role"] == "admin",
+        channels=visible_channels
     )
 
 
@@ -175,13 +194,19 @@ def messages():
     if not current_user():
         return jsonify([]), 403
 
+    channel = request.args.get("channel", "allgemein")
+
+    if not can_access_channel(channel):
+        return jsonify([]), 403
+
     conn = db()
     rows = conn.execute("""
-        SELECT id, user, text, created
+        SELECT id, user, text, created, channel
         FROM messages
+        WHERE channel = ?
         ORDER BY id ASC
         LIMIT 300
-    """).fetchall()
+    """, (channel,)).fetchall()
     conn.close()
 
     return jsonify([dict(row) for row in rows])
@@ -226,12 +251,18 @@ def admin_clear_chat():
     if not is_admin():
         return jsonify({"error": "admin required"}), 403
 
+    data = request.get_json()
+    channel = data.get("channel", "allgemein")
+
+    if channel not in CHANNELS:
+        return jsonify({"error": "unknown channel"}), 400
+
     conn = db()
-    conn.execute("DELETE FROM messages")
+    conn.execute("DELETE FROM messages WHERE channel = ?", (channel,))
     conn.commit()
     conn.close()
 
-    socketio.emit("chat_cleared")
+    socketio.emit("chat_cleared", {"channel": channel})
 
     return jsonify({"ok": True})
 
@@ -335,6 +366,11 @@ def socket_send_message(data):
         return
 
     text = (data.get("text") or "").strip()
+    channel = data.get("channel", "allgemein")
+
+    if not can_access_channel(channel):
+        emit("send_error", {"error": "Kein Zugriff auf diesen Raum."})
+        return
 
     if not text:
         return
@@ -342,14 +378,14 @@ def socket_send_message(data):
     conn = db()
 
     cur = conn.execute(
-        "INSERT INTO messages (user, text) VALUES (?, ?)",
-        (user["username"], text)
+        "INSERT INTO messages (user, text, channel) VALUES (?, ?, ?)",
+        (user["username"], text, channel)
     )
 
     msg_id = cur.lastrowid
 
     row = conn.execute(
-        "SELECT id, user, text, created FROM messages WHERE id = ?",
+        "SELECT id, user, text, created, channel FROM messages WHERE id = ?",
         (msg_id,)
     ).fetchone()
 
