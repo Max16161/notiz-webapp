@@ -350,7 +350,6 @@ def account():
         if action == "profile":
             avatar = request.form.get("avatar", "✊").strip()[:4]
             pronouns = request.form.get("pronouns", "").strip()[:40]
-            sexuality = request.form.get("sexuality", "").strip()[:80]
             party = request.form.get("party", "").strip()[:80]
 
             try:
@@ -379,8 +378,6 @@ def account():
                 msg = "Pronomen fehlen"
             elif age < 13 or age > 120:
                 msg = "Alter muss zwischen 13 und 120 sein"
-            elif not sexuality:
-                msg = "Bitte Sexualität auswählen oder Keine Angabe wählen"
             elif not party:
                 msg = "Bitte Partei auswählen oder Keine Angabe wählen"
             else:

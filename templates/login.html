@@ -4,30 +4,34 @@
     <meta charset="UTF-8">
     <title>Login | Antifaschistischer Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css?v=login-final-1">
+    <link rel="stylesheet" href="/static/style.css?v=phase2-pride-1">
 </head>
+<body class="auth-page">
 
-<body class="auth-body">
+<div class="bg-layer"></div>
+<div class="bg-grid"></div>
+<div class="bg-pride"></div>
 
-<div class="background"></div>
-<div class="grid-layer"></div>
+<div class="auth-wrap">
+    <div class="auth-box">
+        <div class="auth-badge">Pride Month Edition</div>
+        <h1>ANTIFASCHISTISCHER CHAT</h1>
+        <p>Login für solidarische, antifaschistische und queere Community.</p>
 
-<div class="auth-card">
-    <div class="circle-logo big-logo">
-        <span></span>
-        <span></span>
+        <form method="POST" class="auth-form">
+            <label>Username</label>
+            <input name="username" placeholder="Username">
+
+            <label>Passwort</label>
+            <input name="password" type="password" placeholder="Passwort">
+
+            <button>Einloggen</button>
+        </form>
+
+        <div class="auth-links">
+            <a href="/register">Registrieren</a>
+        </div>
     </div>
-
-    <h1>LOGIN</h1>
-    <p>Antifaschistischer Chat</p>
-
-    <form method="POST" action="/login">
-        <input name="username" placeholder="Username" autocomplete="username" required>
-        <input name="password" type="password" placeholder="Passwort" autocomplete="current-password" required>
-        <button>LOGIN</button>
-    </form>
-
-    <a href="/register">Noch keinen Account? Registrieren</a>
 </div>
 
 </body>

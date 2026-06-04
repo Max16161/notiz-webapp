@@ -7,12 +7,62 @@ const onlineUsers = document.getElementById("onlineUsers");
 const adminPanel = document.getElementById("adminPanel");
 const adminUsers = document.getElementById("adminUsers");
 const adminChannels = document.getElementById("adminChannels");
+const adminLogs = document.getElementById("adminLogs");
 const roomTitle = document.getElementById("roomTitle");
 const channelList = document.getElementById("channelList");
 const newChannelName = document.getElementById("newChannelName");
 const newChannelAdminOnly = document.getElementById("newChannelAdminOnly");
+const motdBox = document.getElementById("motdBox");
+const motdText = document.getElementById("motdText");
+const dailyMessage = document.getElementById("dailyMessage");
 
 let currentChannel = window.START_CHANNEL || "allgemein";
+
+async function loadMotd() {
+    if (!motdBox || !motdText) return;
+
+    if (currentChannel !== "allgemein") {
+        motdBox.classList.add("hidden");
+        return;
+    }
+
+    const res = await fetch("/motd");
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const text = data.text || "";
+
+    if (!text.trim()) {
+        motdBox.classList.add("hidden");
+        return;
+    }
+
+    motdText.textContent = text;
+    motdBox.classList.remove("hidden");
+
+    if (dailyMessage) {
+        dailyMessage.value = text;
+    }
+}
+
+async function saveMotd() {
+    if (!window.IS_ADMIN || !dailyMessage) return;
+
+    const text = dailyMessage.value.trim();
+
+    const res = await fetch("/admin/motd", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ text })
+    });
+
+    if (!res.ok) {
+        alert("Nachricht des Tages konnte nicht gespeichert werden");
+        return;
+    }
+
+    loadMotd();
+}
 
 async function loadChannels() {
     const res = await fetch("/channels");
@@ -38,6 +88,7 @@ async function loadChannels() {
     });
 
     roomTitle.textContent = "# " + currentChannel;
+    loadMotd();
     loadMessages();
 }
 
@@ -76,6 +127,7 @@ function switchChannel(channel) {
         btn.classList.toggle("active", btn.dataset.channel === channel);
     });
 
+    loadMotd();
     loadMessages();
 }
 
@@ -93,6 +145,22 @@ async function loadMessages() {
     chat.scrollTop = chat.scrollHeight;
 }
 
+function avatarHtml(m) {
+    if (m.profile_picture) {
+        return `<img class="avatar-img" src="${escapeHtml(m.profile_picture)}" alt="">`;
+    }
+
+    return `<span class="avatar-bubble">${escapeHtml(m.avatar || "✊")}</span>`;
+}
+
+function onlineAvatarHtml(user) {
+    if (user.profile_picture) {
+        return `<img class="online-avatar-img" src="${escapeHtml(user.profile_picture)}" alt="">`;
+    }
+
+    return `<span class="online-emoji">${escapeHtml(user.avatar || "✊")}</span>`;
+}
+
 function addMessage(m) {
     if (m.channel !== currentChannel) return;
 
@@ -105,11 +173,15 @@ function addMessage(m) {
 
     div.innerHTML = `
         <div class="msg-top">
-            <b>${escapeHtml(m.user)}</b>
+            <span class="msg-userline">
+                ${avatarHtml(m)}
+                <b>${escapeHtml(m.user)}</b>
+                <em>${escapeHtml(m.role || "user")}</em>
+            </span>
             <span>${timeAgo(m.created)}</span>
         </div>
         <div class="msg-text">${escapeHtml(m.text)}</div>
-        ${window.IS_ADMIN ? `<button class="msg-delete" onclick="deleteMessage(${m.id})">löschen</button>` : ""}
+        ${window.CAN_MODERATE ? `<button class="msg-delete" onclick="deleteMessage(${m.id})">löschen</button>` : ""}
     `;
 
     chat.appendChild(div);
@@ -159,6 +231,12 @@ socket.on("channels_changed", () => {
     loadAdminChannels();
 });
 
+socket.on("motd_changed", (data) => {
+    if (data.channel === "allgemein") {
+        loadMotd();
+    }
+});
+
 socket.on("online_users", (users) => {
     onlineUsers.innerHTML = "";
 
@@ -170,7 +248,7 @@ socket.on("online_users", (users) => {
     users.forEach(user => {
         const div = document.createElement("div");
         div.className = "online-user";
-        div.innerHTML = `<span>●</span>${escapeHtml(user)}`;
+        div.innerHTML = `${onlineAvatarHtml(user)} ${escapeHtml(user.username)} <small>${escapeHtml(user.role)}</small>`;
         onlineUsers.appendChild(div);
     });
 });
@@ -181,6 +259,7 @@ socket.on("send_error", (data) => {
 
 socket.on("admin_users_changed", () => {
     loadAdminUsers();
+    loadAdminLogs();
 });
 
 function toggleOnline() {
@@ -192,6 +271,8 @@ function toggleAdmin() {
     adminPanel.classList.toggle("hidden");
     loadAdminUsers();
     loadAdminChannels();
+    loadAdminLogs();
+    loadMotd();
 }
 
 async function createChannel() {
@@ -221,6 +302,7 @@ async function createChannel() {
 
     loadChannels();
     loadAdminChannels();
+    loadAdminLogs();
 }
 
 async function deleteChannel(name) {
@@ -241,6 +323,7 @@ async function deleteChannel(name) {
 
     loadChannels();
     loadAdminChannels();
+    loadAdminLogs();
 }
 
 async function loadAdminUsers() {
@@ -258,19 +341,38 @@ async function loadAdminUsers() {
         const div = document.createElement("div");
         div.className = "admin-user";
 
-        const role = u.role === "admin" ? "ADMIN" : "USER";
-        const banText = u.banned ? "entbannen" : "bannen";
+        const avatar = u.profile_picture
+            ? `<img class="online-avatar-img" src="${escapeHtml(u.profile_picture)}" alt="">`
+            : escapeHtml(u.avatar || "✊");
 
         div.innerHTML = `
             <div>
-                <b>${escapeHtml(u.username)}</b>
-                <span>${role}${u.banned ? " · GEBANNT" : ""}</span>
+                <b>${avatar} ${escapeHtml(u.username)}</b>
+                <span>${escapeHtml(u.role)}${u.banned ? " · GEBANNT" : ""}</span>
             </div>
-            ${u.role !== "admin" ? `<button onclick="toggleBan('${escapeHtml(u.username)}')">${banText}</button>` : ""}
+            <div class="admin-user-actions">
+                <button onclick="setRole('${escapeHtml(u.username)}', 'user')">User</button>
+                <button onclick="setRole('${escapeHtml(u.username)}', 'mod')">Mod</button>
+                <button onclick="setRole('${escapeHtml(u.username)}', 'admin')">Admin</button>
+                ${u.role !== "admin" ? `<button onclick="toggleBan('${escapeHtml(u.username)}')">bannen</button>` : ""}
+                ${u.role !== "admin" ? `<button onclick="resetPassword('${escapeHtml(u.username)}')">PW</button>` : ""}
+                ${u.role !== "admin" ? `<button onclick="deleteUser('${escapeHtml(u.username)}')">löschen</button>` : ""}
+            </div>
         `;
 
         adminUsers.appendChild(div);
     });
+}
+
+async function setRole(username, role) {
+    await fetch("/admin/set-role", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ username, role })
+    });
+
+    loadAdminUsers();
+    loadAdminLogs();
 }
 
 async function toggleBan(username) {
@@ -281,6 +383,39 @@ async function toggleBan(username) {
     });
 
     loadAdminUsers();
+    loadAdminLogs();
+}
+
+async function resetPassword(username) {
+    const newPassword = prompt(`Neues Passwort für ${username}:`);
+
+    if (!newPassword) return;
+
+    await fetch("/admin/reset-password", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            username: username,
+            new_password: newPassword
+        })
+    });
+
+    loadAdminLogs();
+}
+
+async function deleteUser(username) {
+    const sure = confirm(`${username} wirklich löschen?`);
+
+    if (!sure) return;
+
+    await fetch("/admin/delete-user", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ username })
+    });
+
+    loadAdminUsers();
+    loadAdminLogs();
 }
 
 async function deleteMessage(id) {
@@ -289,6 +424,8 @@ async function deleteMessage(id) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ id })
     });
+
+    loadAdminLogs();
 }
 
 async function clearChat() {
@@ -300,6 +437,33 @@ async function clearChat() {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ channel: currentChannel })
+    });
+
+    loadAdminLogs();
+}
+
+async function loadAdminLogs() {
+    if (!window.IS_ADMIN || !adminLogs) return;
+
+    const res = await fetch("/admin/logs");
+
+    if (!res.ok) return;
+
+    const logs = await res.json();
+
+    adminLogs.innerHTML = "";
+
+    logs.forEach(log => {
+        const div = document.createElement("div");
+        div.className = "log-row";
+
+        div.innerHTML = `
+            <b>${escapeHtml(log.actor)}</b>
+            <span>${escapeHtml(log.action)}</span>
+            <small>${escapeHtml(log.target || "")}</small>
+        `;
+
+        adminLogs.appendChild(div);
     });
 }
 
@@ -333,10 +497,12 @@ function timeAgo(value) {
 }
 
 loadChannels();
+loadMotd();
 
 if (window.IS_ADMIN) {
     loadAdminUsers();
     loadAdminChannels();
+    loadAdminLogs();
 }
 
 setInterval(() => {
@@ -345,4 +511,5 @@ setInterval(() => {
 
 if (window.IS_ADMIN) {
     setInterval(loadAdminUsers, 5000);
+    setInterval(loadAdminLogs, 7000);
 }

@@ -4,105 +4,171 @@
     <meta charset="UTF-8">
     <title>Antifaschistischer Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css?v=dynamic-channels-1">
+    <link rel="stylesheet" href="/static/style.css?v=phase2-pride-1">
 </head>
 
-<body>
+<body class="theme-{{ theme }}">
 
-<div class="background"></div>
-<div class="grid-layer"></div>
+<div class="bg-layer"></div>
+<div class="bg-grid"></div>
+<div class="bg-pride"></div>
+
+<div id="profileModal" class="profile-modal hidden">
+    <div class="profile-modal-card">
+        <button class="modal-close" onclick="closeProfile()">×</button>
+        <div id="profileModalContent"></div>
+    </div>
+</div>
 
 <header class="topbar">
     <div class="brand-block">
-        <div class="circle-logo">
-            <span></span>
-            <span></span>
+        <div class="brand-logo">
+            <div class="flag-circle">
+                <span class="flag-red"></span>
+                <span class="flag-black"></span>
+            </div>
+            <div class="brand-text">
+                <div class="title">ANTIFASCHISTISCHER CHAT</div>
+                <div class="subtitle">
+                    Solidarität · Queer Liberation · Gegen Faschismus
+                </div>
+            </div>
         </div>
 
-        <div>
-            <div class="title">ANTIFASCHISTISCHER CHAT</div>
-            <div class="subtitle">
-                Eingeloggt als <b>{{ user }}</b>
-                {% if is_admin %}
-                    <span class="admin-badge">ADMIN</span>
-                {% endif %}
+        <div class="account-status">
+            <div class="account-main">{{ avatar }} {{ user }}</div>
+            <div class="account-sub">
+                <span class="role-pill">{{ role }}</span>
+                <span>{{ pronouns }}</span>
+                <span>·</span>
+                <span>{{ age }}</span>
+                <span>·</span>
+                <span>{{ party }}</span>
             </div>
         </div>
     </div>
 
     <div class="top-actions">
-        <button class="online-button" onclick="toggleOnline()">ONLINE</button>
+        <a class="action-btn" href="/account">ACCOUNT</a>
+        <button class="action-btn" onclick="toggleOnline()">ONLINE</button>
         {% if is_admin %}
-            <button class="online-button" onclick="toggleAdmin()">ADMIN</button>
+        <button class="action-btn" onclick="toggleAdmin()">ADMIN</button>
         {% endif %}
-        <a class="logout-link" href="/logout">LOGOUT</a>
+        <a class="action-btn danger" href="/logout">LOGOUT</a>
     </div>
 </header>
 
+<section class="hero-banner">
+    <div class="hero-left">
+        <div class="hero-badge">JUNI SPECIAL</div>
+        <h1>Kein Platz für Faschismus, Queerfeindlichkeit, Rassismus oder Menschenhass.</h1>
+        <p>
+            Pride heißt Widerstand, Sichtbarkeit und Solidarität. Dieser Raum steht für
+            antifaschistische, feministische und queere Gemeinschaft.
+        </p>
+    </div>
+
+    <div class="hero-right">
+        <div class="hero-card">
+            <div class="hero-card-title">Grundsätze</div>
+            <ul>
+                <li>Solidarisch statt autoritär</li>
+                <li>Queere Befreiung ist Teil antifaschistischer Praxis</li>
+                <li>Kein Raum für Diskriminierung</li>
+                <li>Gemeinsam statt allein</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
 <section class="identity-panel">
     <div class="identity-card">
-        <div class="label">Account</div>
-        <div class="logged-user">{{ user }}</div>
-
+        <div class="label">Dein Status</div>
+        <div class="logged-user">{{ avatar }} {{ user }}</div>
         <div class="status-line">
             <span class="green-dot"></span>
-            live verbunden
+            online und verbunden
         </div>
     </div>
 
     <div id="onlinePanel" class="online-panel hidden">
-        <div class="online-title">Gerade online</div>
+        <div class="panel-title">Gerade online</div>
         <div id="onlineUsers"></div>
     </div>
 
     {% if is_admin %}
     <div id="adminPanel" class="admin-panel hidden">
-        <div class="online-title">Admin Panel</div>
+        <div class="panel-title">Admin Panel</div>
 
-        <button class="danger-btn" onclick="clearChat()">Aktuellen Raum leeren</button>
+        <button class="admin-main-btn" onclick="clearChat()">Aktuellen Raum leeren</button>
+
+        <div class="admin-section-title">Nachricht des Tages</div>
+        <textarea id="dailyMessage" class="admin-textarea" placeholder="Angepinnte Nachricht für aktuellen Raum"></textarea>
+        <button class="admin-main-btn secondary" onclick="saveMotd()">Anpinnen</button>
 
         <div class="admin-section-title">Neuer Raum</div>
-
         <div class="channel-create">
             <input id="newChannelName" placeholder="raum-name">
-            <label>
+            <label class="checkbox-label">
                 <input id="newChannelAdminOnly" type="checkbox">
                 nur Admin
             </label>
             <button onclick="createChannel()">Erstellen</button>
         </div>
 
+        <div class="admin-section-title">Stats</div>
+        <div id="adminStats" class="admin-stats"></div>
+
         <div class="admin-section-title">Räume</div>
         <div id="adminChannels"></div>
 
         <div class="admin-section-title">User</div>
         <div id="adminUsers"></div>
+
+        <div class="admin-section-title">Meldungen</div>
+        <div id="adminReports" class="admin-log"></div>
+
+        <div class="admin-section-title">Admin-Log</div>
+        <div id="adminLogs" class="admin-log"></div>
     </div>
     {% endif %}
 </section>
 
 <main class="main-layout">
+    <aside class="left-panel">
+        <div class="manifest-panel">
+            <div class="manifest-title">RÄUME</div>
+            <div id="channelList" class="channel-list"></div>
+        </div>
 
-    <aside class="manifest-panel">
-        <div class="manifest-title">RÄUME</div>
-
-        <div id="channelList" class="channel-list"></div>
-
-        <div class="poster-block">
-            <div>ANTIFASCHISTISCH</div>
-            <div>SOLIDARISCH</div>
-            <div>ORGANISIERT</div>
+        <div class="poster-panel">
+            <div class="poster-title">JUNI / PRIDE / WIDERSTAND</div>
+            <div class="poster-lines">
+                <span>ANTIFASCHISTISCH</span>
+                <span>QUEER SOLIDARISCH</span>
+                <span>FEMINISTISCH</span>
+                <span>ANTIRASSISTISCH</span>
+            </div>
         </div>
     </aside>
 
     <section class="chat-shell">
         <div class="chat-head">
-            <div>
+            <div class="chat-head-left">
                 <strong id="roomTitle"># allgemein</strong>
-                <span>Echter Live-Chat über WebSocket</span>
+                <span id="typingIndicator">Live-Chat aktiv</span>
             </div>
-
             <div class="live-pill">● LIVE</div>
+        </div>
+
+        <div id="motdBox" class="motd-box hidden">
+            <div class="motd-label">Angepinnte Nachricht des Tages</div>
+            <div id="motdText"></div>
+        </div>
+
+        <div id="replyBox" class="reply-box hidden">
+            <span id="replyText"></span>
+            <button onclick="cancelReply()">×</button>
         </div>
 
         <div id="chat" class="chat"></div>
@@ -112,17 +178,18 @@
             <button onclick="sendMsg()">SEND</button>
         </div>
     </section>
-
 </main>
 
 <script>
     window.CURRENT_USER = "{{ user }}";
+    window.USER_ROLE = "{{ role }}";
     window.IS_ADMIN = {{ "true" if is_admin else "false" }};
+    window.CAN_MODERATE = {{ "true" if can_moderate else "false" }};
     window.START_CHANNEL = "allgemein";
 </script>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script src="/static/app.js?v=dynamic-channels-1"></script>
+<script src="/static/app.js?v=mega-features-1"></script>
 
 </body>
 </html>

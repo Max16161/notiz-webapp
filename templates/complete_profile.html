@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Profil vervollständigen</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css?v=phase2-pride-1">
+</head>
+<body class="account-page phase2-page">
+
+<div class="bg-layer"></div>
+<div class="bg-grid"></div>
+<div class="bg-pride"></div>
+<div class="phase2-orbit"></div>
+
+<div class="account-card phase2-card">
+    <div class="auth-badge">Pride Month Pflichtprofil</div>
+    <h1>Profil vervollständigen</h1>
+    <p class="profile-note">
+        Für einen respektvollen Raum: Pronomen, Alter, politische Angabe und Sexualität.
+        Bei sensiblen Angaben kannst du immer „Keine Angabe“ wählen.
+    </p>
+
+    {% if msg %}
+        <div class="account-msg">{{ msg }}</div>
+    {% endif %}
+
+    <form method="POST" class="account-form">
+        <label>Pronomen</label>
+        <input name="pronouns" placeholder="z.B. er/ihm, sie/ihr, they/them" value="{{ user['pronouns'] or '' }}" required>
+
+        <label>Alter</label>
+        <input name="age" type="number" min="13" max="120" placeholder="Alter" value="{{ user['age'] or '' }}" required>
+
+        <label>Sexualität</label>
+        <select name="sexuality" required>
+            <option value="">Bitte wählen</option>
+            <option value="Keine Angabe">Keine Angabe</option>
+            <option value="Heterosexuell">Heterosexuell</option>
+            <option value="Homosexuell / schwul">Homosexuell / schwul</option>
+            <option value="Homosexuell / lesbisch">Homosexuell / lesbisch</option>
+            <option value="Bisexuell">Bisexuell</option>
+            <option value="Pansexuell">Pansexuell</option>
+            <option value="Asexuell">Asexuell</option>
+            <option value="Aromantisch">Aromantisch</option>
+            <option value="Demisexuell">Demisexuell</option>
+            <option value="Queer">Queer</option>
+            <option value="Questioning / unsicher">Questioning / unsicher</option>
+            <option value="Omnisexuell">Omnisexuell</option>
+            <option value="Polysexuell">Polysexuell</option>
+            <option value="Sapiosexuell">Sapiosexuell</option>
+            <option value="Graysexuell">Graysexuell</option>
+            <option value="Androsexuell">Androsexuell</option>
+            <option value="Gynosexuell">Gynosexuell</option>
+            <option value="Skoliosexuell / Ceterosexuell">Skoliosexuell / Ceterosexuell</option>
+            <option value="Abrosexuell">Abrosexuell</option>
+            <option value="Andere / Selbstbezeichnung">Andere / Selbstbezeichnung</option>
+        </select>
+
+        <label>Partei / politische Angabe</label>
+        <select name="party" required>
+            <option value="">Bitte wählen</option>
+            <option value="Keine Angabe">Keine Angabe</option>
+            <option value="Parteilos">Parteilos</option>
+            <option value="SPD">SPD</option>
+            <option value="Bündnis 90/Die Grünen">Bündnis 90/Die Grünen</option>
+            <option value="Die Linke">Die Linke</option>
+            <option value="Die PARTEI">Die PARTEI</option>
+            <option value="Piratenpartei">Piratenpartei</option>
+            <option value="Tierschutzpartei">Tierschutzpartei</option>
+            <option value="FDP (kritisch)">FDP (kritisch)</option>
+            <option value="CDU/CSU (kritisch)">CDU/CSU (kritisch)</option>
+            <option value="AfD (kritisch)">AfD (kritisch)</option>
+            <option value="BSW (kritisch)">BSW (kritisch)</option>
+            <option value="Freie Wähler (kritisch)">Freie Wähler (kritisch)</option>
+            <option value="Volt (kritisch)">Volt (kritisch)</option>
+            <option value="Andere (kritisch)">Andere (kritisch)</option>
+        </select>
+
+        <button>Profil speichern</button>
+    </form>
+</div>
+
+</body>
+</html>
