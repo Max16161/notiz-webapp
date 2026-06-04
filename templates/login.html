@@ -1,24 +1,34 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-<title>Login</title>
-<style>
-body { background:#000; color:white; font-family:Arial; text-align:center; padding-top:100px; }
-input, button { padding:10px; margin:5px; }
-button { background:red; color:white; border:none; }
-</style>
+    <meta charset="UTF-8">
+    <title>Login | Antifaschistischer Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css?v=login-final-1">
 </head>
-<body>
 
-<h2>Login</h2>
+<body class="auth-body">
 
-<form method="POST">
-    <input name="username" placeholder="Username"><br>
-    <input name="password" type="password" placeholder="Password"><br>
-    <button>Login</button>
-</form>
+<div class="background"></div>
+<div class="grid-layer"></div>
 
-<a href="/register">Registrieren</a>
+<div class="auth-card">
+    <div class="circle-logo big-logo">
+        <span></span>
+        <span></span>
+    </div>
+
+    <h1>LOGIN</h1>
+    <p>Antifaschistischer Chat</p>
+
+    <form method="POST" action="/login">
+        <input name="username" placeholder="Username" autocomplete="username" required>
+        <input name="password" type="password" placeholder="Passwort" autocomplete="current-password" required>
+        <button>LOGIN</button>
+    </form>
+
+    <a href="/register">Noch keinen Account? Registrieren</a>
+</div>
 
 </body>
 </html>

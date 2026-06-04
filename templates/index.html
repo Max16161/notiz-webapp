@@ -2,38 +2,115 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Antifaschistischer Chat</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css?v=socket-live-1">
 </head>
 
 <body>
 
-<div class="background-glow"></div>
+<div class="background"></div>
+<div class="grid-layer"></div>
 
-<div class="app">
-
-    <header>
-        <div class="logo">
-            <span class="dot red"></span>
-            <span class="dot black"></span>
-            <span class="dot red"></span>
+<header class="topbar">
+    <div class="brand-block">
+        <div class="circle-logo">
+            <span></span>
+            <span></span>
         </div>
 
-        <h1>ANTIFASCHISTISCHER CHAT</h1>
-        <p>solidarisch • anonym • aktiv</p>
-    </header>
-
-    <div class="chat-box" id="chat"></div>
-
-    <div class="input-bar">
-        <input id="user" placeholder="Name / Alias">
-        <input id="text" placeholder="Nachricht...">
-        <button onclick="sendMsg()">SEND</button>
+        <div>
+            <div class="title">ANTIFASCHISTISCHER CHAT</div>
+            <div class="subtitle">
+                Eingeloggt als <b>{{ user }}</b>
+                {% if is_admin %}
+                    <span class="admin-badge">ADMIN</span>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
-</div>
+    <div class="top-actions">
+        <button class="online-button" onclick="toggleOnline()">ONLINE</button>
+        {% if is_admin %}
+            <button class="online-button" onclick="toggleAdmin()">ADMIN</button>
+        {% endif %}
+        <a class="logout-link" href="/logout">LOGOUT</a>
+    </div>
+</header>
 
-<script src="/static/app.js"></script>
+<section class="identity-panel">
+    <div class="identity-card">
+        <div class="label">Account</div>
+        <div class="logged-user">{{ user }}</div>
+
+        <div class="status-line">
+            <span class="green-dot"></span>
+            live verbunden
+        </div>
+    </div>
+
+    <div id="onlinePanel" class="online-panel hidden">
+        <div class="online-title">Gerade online</div>
+        <div id="onlineUsers"></div>
+    </div>
+
+    {% if is_admin %}
+    <div id="adminPanel" class="admin-panel hidden">
+        <div class="online-title">Admin Panel</div>
+
+        <button class="danger-btn" onclick="clearChat()">Chat leeren</button>
+
+        <div class="admin-section-title">User</div>
+        <div id="adminUsers"></div>
+    </div>
+    {% endif %}
+</section>
+
+<main class="main-layout">
+
+    <aside class="manifest-panel">
+        <div class="manifest-title">SOLIDARITÄT</div>
+
+        <div class="manifest-line">Kein Platz für Faschismus.</div>
+        <div class="manifest-line">Kein Platz für Hass.</div>
+        <div class="manifest-line">Gemeinsam statt allein.</div>
+        <div class="manifest-line">Menschenwürde bleibt unantastbar.</div>
+
+        <div class="poster-block">
+            <div>ANTIFASCHISTISCH</div>
+            <div>SOLIDARISCH</div>
+            <div>ORGANISIERT</div>
+        </div>
+    </aside>
+
+    <section class="chat-shell">
+        <div class="chat-head">
+            <div>
+                <strong>Community Chat</strong>
+                <span>Echter Live-Chat über WebSocket</span>
+            </div>
+
+            <div class="live-pill">● LIVE</div>
+        </div>
+
+        <div id="chat" class="chat"></div>
+
+        <div class="inputbar">
+            <input id="text" placeholder="Nachricht schreiben..." autocomplete="off">
+            <button onclick="sendMsg()">SEND</button>
+        </div>
+    </section>
+
+</main>
+
+<script>
+    window.CURRENT_USER = "{{ user }}";
+    window.IS_ADMIN = {{ "true" if is_admin else "false" }};
+</script>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/static/app.js?v=socket-live-1"></script>
+
 </body>
 </html>
